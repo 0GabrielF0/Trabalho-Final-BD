@@ -70,5 +70,5 @@ Para derrubar todos os containers de forma organizada:
 
 ```bash
 cd streamlit
-./stop.sh
+bash stop.sh
 ```
