@@ -11,8 +11,6 @@ echo "Copiando novos arquivos..."
 cp -r Trabalho-Final-BD/app ./streamlit
 cp -r Trabalho-Final-BD/data ./mongodb
 
-chmod +x start.sh stop.sh
-
 echo "Configurando permissões..."
 cd streamlit
 
