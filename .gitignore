@@ -1,0 +1,21 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual env
+env/
+venv/
+
+# Logs
+*.log
+
+# Dados brutos que NÃO devem ir para o GitHub
+data_raw/
+*.zip
+
+# Sistema
+.DS_Store
+
+# Windows
+Thumbs.db
