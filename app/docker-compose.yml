@@ -1,0 +1,20 @@
+version: '3.3'
+
+services:
+  streamlit-app:
+    build:
+      context: .
+    container_name: streamlit_app
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./app.py:/app/app.py
+      - ./data_processed:/app/data_processed
+    networks:
+      - mybridge
+    environment:
+      - MONGO_URI=mongodb://root:mongo@mongo_service:27017/
+
+networks:
+  mybridge:
+    external: true
