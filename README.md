@@ -2,15 +2,14 @@
 
 Este projeto realiza a integração entre um dashboard Streamlit e um banco de dados MongoDB para visualização de dados de e-commerce. O sistema conta com scripts de automação para deploy e carga inicial de dados (auto-seeding) a partir de arquivos CSV.
 
-## Guia de Instalação e Deploy
-
-Siga os passos abaixo para configurar o ambiente do zero no servidor.
+## Guia de Uso
 
 ### 1. Preparação do Ambiente
 
-Execute os comandos abaixo para garantir permissões e preparar o diretório.
-
-Nota: Execute como root ou utilize sudo se necessário.
+Tenha o ambiente limpo, caso necessário, instale:
+```bash
+git clone https://github.com/klaytoncastro/ceub-bigdata.git
+```
 
 ```bash
 sudo su -
@@ -21,21 +20,19 @@ chown -R labihc ceub-bigdata
 cd ceub-bigdata
 ```
 
-### 2. Clonagem e Atualização dos Arquivos
+### 2. Clonagem do repositório
 
-Clone o repositório e execute o script de instalação
+Clone o repositório e entre na pasta do projeto
 
 ```bash
 git clone https://github.com/0GabrielF0/Trabalho-Final-BD.git
 
 cd Trabalho-Final-BD
-
-bash setup.sh
 ```
 
 ### 3. Execução do Projeto
 
-Utilize o script automatizado para subir todo o ambiente.
+Utilize o script automatizado para iniciar todo o ambiente.
 
 ```bash
 bash start.sh
@@ -44,14 +41,13 @@ bash start.sh
 ## Estrutura do Repositório
 ```
 .
-├── setup.sh                        # Script de automação para instalação
+├── start.sh                        # Script de automação para instalação e inicialiação (gerencia rede, banco e app)
+├── stop.sh                         # Script para encerrar todos os serviços
 ├── mongodb/
 │   ├── docker-compose.yml          # Configuração dos serviços MongoDB e Mongo Express
 │   └── wait-for-it.sh              # Utilitário de rede para aguardar o banco
 └── streamlit/
     ├── app.py                      # Código principal da aplicação Dashboard
-    ├── start.sh                    # Script de inicialização (gerencia rede, banco e app)
-    ├── stop.sh                     # Script para encerrar todos os serviços
     └── data_processed/
         └── dataset_final_simple.csv # Arquivo CSV para carga inicial
 ```
@@ -60,7 +56,7 @@ bash start.sh
 
 Após a execução do `start.sh`, os serviços estarão disponíveis nos seguintes endereços:
 
-| Serviço | URL | Credenciais (se houver) |
+| Serviço | URL | Credenciais |
 | :--- | :--- | :--- |
 | **Dashboard Olist** | `http://localhost:8501` | - |
 | **Mongo Express** | `http://localhost:8081` | **User:** admin / **Pass:** pass |
@@ -69,6 +65,5 @@ Após a execução do `start.sh`, os serviços estarão disponíveis nos seguint
 Para derrubar todos os containers de forma organizada:
 
 ```bash
-cd streamlit
 bash stop.sh
 ```
