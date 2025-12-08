@@ -2,7 +2,20 @@
 
 Este projeto realiza a integração entre um dashboard Streamlit e um banco de dados MongoDB para visualização de dados de e-commerce. O sistema conta com scripts de automação para deploy e carga inicial de dados (auto-seeding) a partir de arquivos CSV.
 
-## Guia de Uso
+## Guia de Uso Automático
+
+Copie todo o conteúdo da célula e cole no terminal, estando na pasta `/opt/`
+```bash
+git clone https://github.com/klaytoncastro/ceub-bigdata.git
+chown -R labihc ceub-bigdata
+cd ceub-bigdata
+git clone https://github.com/0GabrielF0/Trabalho-Final-BD.git
+cd Trabalho-Final-BD
+bash start.sh
+echo ""
+```
+
+## Guia de Uso Manual
 
 ### 1. Preparação do Ambiente
 
