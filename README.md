@@ -16,7 +16,7 @@ Nota: Execute como root ou utilize sudo se necessário.
 sudo su -
 
 # Certifique-se de estar no diretório /opt/
-chown -R labihc:labihc ceub-bigdata
+chown -R labihc ceub-bigdata
 
 cd ceub-bigdata
 ```
