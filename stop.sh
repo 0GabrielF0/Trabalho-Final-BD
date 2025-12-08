@@ -3,6 +3,7 @@
 echo "Parando serviços..."
 
 # Derruba Streamlit
+cd streamlit
 docker-compose down
 
 # Derruba MongoDB
