@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Slides Unificados – Dashboard Olist (Docker + MongoDB)</title>
+
+<!-- External libs (carregados uma única vez) -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&family=Open+Sans:wght@300;400;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<style>
+    /* Base */
+    body { margin: 0; background: #0b172a; color: #f8fafc; font-family: 'Open Sans', sans-serif; }
+    .viewer { width: 100%; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    .slide-frame { width: 100%; display: none; justify-content: center; padding: 24px 0; }
+    .slide-frame.active { display: flex; }
+    .slide-container { width: 1280px; min-height: 720px; background-color: #ffffff; position: relative; overflow: hidden; }
+    .bg-brand-blue { background-color: #212B5C; }
+    .text-brand-blue { color: #212B5C; }
+    .bg-brand-orange { background-color: #FDB913; }
+    .text-brand-orange { color: #FDB913; }
+    .font-montserrat { font-family: 'Montserrat', sans-serif; }
+    .font-mono { font-family: 'Fira Code', monospace; }
+
+    /* Top bar */
+    .topbar {
+        position: sticky; top: 0; z-index: 50;
+        display: flex; align-items: center; justify-content: center; gap: 12px;
+        padding: 12px; background: #111827; border-bottom: 1px solid #1f2937;
+    }
+    .topbar button {
+        padding: 10px 18px; border: none; border-radius: 8px;
+        background: #2563eb; color: #fff; font-weight: 700; cursor: pointer;
+        box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+    }
+    .topbar button:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+    .topbar .status { font-size: 14px; color: #cbd5e1; }
+
+    /* Utilitários e efeitos */
+    .feature-card { transition: transform 0.2s; }
+    .feature-card:hover { transform: translateY(-2px); }
+    .flow-card { transition: all 0.3s ease; }
+    .flow-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); }
+    .decision-card { transition: transform 0.2s, box-shadow 0.2s; }
+    .decision-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .kpi-card { transition: all 0.3s ease; position: relative; overflow: hidden; }
+    .kpi-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+    .kpi-icon-bg { position: absolute; right: -20px; bottom: -20px; font-size: 8rem; opacity: 0.05; transform: rotate(-15deg); }
+    .insight-card { border-left-width: 4px; transition: transform 0.2s; }
+    .insight-card:hover { transform: translateX(5px); }
+    .chart-wrapper { position: relative; height: 400px; width: 100%; }
+    .chart-card { transition: all 0.3s ease; border-top: 4px solid transparent; }
+    .chart-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+    .info-card { border-left-width: 4px; transition: all 0.3s ease; }
+    .info-card:hover { transform: translateX(5px); background-color: #f9fafb; }
+    .highlight-card { transition: all 0.3s ease; }
+    .highlight-card:hover { transform: translateX(8px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+    .content-card { transition: transform 0.3s ease, box-shadow 0.3s ease; position: relative; overflow: hidden; }
+    .content-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
+    .conclusion-card { transition: all 0.3s ease; border-top-width: 6px; }
+    .conclusion-card:hover { transform: translateY(-10px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+    .team-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .team-card:hover { transform: translateY(-10px); }
+    .avatar-circle { background: linear-gradient(135deg, #212B5C 0%, #3a4b8c 100%); color: white; box-shadow: 0 4px 6px rgba(33, 43, 92, 0.2); }
+    .terminal-window { background-color: #1e293b; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); overflow: hidden; }
+    .terminal-header { background-color: #334155; padding: 0.5rem; display: flex; gap: 0.4rem; }
+    .terminal-dot { width: 0.75rem; height: 0.75rem; border-radius: 9999px; }
+    .tech-pattern { background-image: linear-gradient(rgba(33, 43, 92, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(33, 43, 92, 0.03) 1px, transparent 1px); background-size: 40px 40px; }
+    .step-badge { position: absolute; top: -1.5rem; left: 50%; transform: translateX(-50%); width: 3rem; height: 3rem; display: flex; align-items: center; justify-center: center; border-radius: 9999px; font-family: 'Montserrat', sans-serif; font-weight: 800; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .shape-blob { position: absolute; filter: blur(24px); opacity: 0.5; }
+    .step-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .step-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
+</style>
+</head>
+<body>
+<div class="topbar">
+    <button id="prevBtn">⟵ Anterior</button>
+    <button id="nextBtn">Próximo ⟶</button>
+    <span class="status" id="status"></span>
+</div>
+
+<div class="viewer">
+
+    <!-- Slide 1 -->
+    <section class="slide-frame active" data-index="0">
+        <div class="slide-container">
+            <div class="w-7/12 flex flex-col justify-center pl-24 pr-12 z-10 bg-white">
+                <div class="flex items-center mb-8">
+                    <div class="h-1 w-16 bg-brand-orange mr-4"></div>
+                    <p class="font-montserrat font-bold text-sm uppercase tracking-widest text-gray-500">Fundamentos de Big Data</p>
+                </div>
+                <div class="mb-10">
+                    <h1 class="font-montserrat font-extrabold text-6xl leading-tight text-brand-blue mb-4">Dashboard de<br/>Vendas Olist</h1>
+                    <h2 class="font-montserrat font-light text-3xl text-gray-600">Tema 5: Visualização e Exploração</h2>
+                    <p class="mt-3 text-gray-500">Agora containerizado (Docker) e conectado ao MongoDB.</p>
+                </div>
+                <div class="w-24 h-2 bg-gray-100 mb-12"></div>
+                <div class="flex flex-col mb-12">
+                    <p class="font-montserrat font-bold text-gray-400 text-xs uppercase tracking-wider mb-6">Equipe do Projeto</p>
+                    <div class="grid grid-cols-2 gap-y-6 gap-x-4">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-3 text-brand-blue shadow-sm"><i class="fa-solid fa-user text-sm"></i></div>
+                            <p class="text-lg text-gray-700 font-medium">Pedro Rebello</p>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-3 text-brand-blue shadow-sm"><i class="fa-solid fa-user text-sm"></i></div>
+                            <p class="text-lg text-gray-700 font-medium">Mariana Almeida</p>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-3 text-brand-blue shadow-sm"><i class="fa-solid fa-user text-sm"></i></div>
+                            <p class="text-lg text-gray-700 font-medium">Gabriel Francisco</p>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-3 text-brand-blue shadow-sm"><i class="fa-solid fa-user text-sm"></i></div>
+                            <p class="text-lg text-gray-700 font-medium">Guilherme Mendes</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center text-gray-400 font-medium text-sm border-t border-gray-100 pt-6 w-full">
+                    <i class="fa-regular fa-calendar mr-2 text-brand-orange"></i>
+                    <p>05 de Dezembro de 2025</p>
+                </div>
+            </div>
+            <div class="w-5/12 h-full bg-brand-blue relative flex items-center justify-center overflow-hidden">
+                <svg class="absolute opacity-5" height="100%" width="100%">
+                    <pattern height="20" id="dots" patternUnits="userSpaceOnUse" width="20" x="0" y="0">
+                        <circle cx="2" cy="2" fill="white" r="1.5"></circle>
+                    </pattern>
+                    <rect fill="url(#dots)" height="100%" width="100%"></rect>
+                </svg>
+                <div class="absolute -top-24 -right-24 w-96 h-96 bg-white opacity-5 rounded-full"></div>
+                <div class="absolute bottom-20 -left-20 w-64 h-64 bg-brand-orange opacity-20 rounded-full blur-3xl"></div>
+                <div class="relative z-10 transform scale-110">
+                    <div class="bg-white p-6 rounded-xl shadow-2xl transform -rotate-6 w-72 mb-[-40px] ml-[-20px] z-10 relative border-b-4 border-r-4 border-gray-200">
+                        <div class="flex justify-between items-end h-32 gap-3 px-2">
+                            <div class="w-full bg-brand-blue opacity-20 h-16 rounded-top"></div>
+                            <div class="w-full bg-brand-blue opacity-40 h-20 rounded-top"></div>
+                            <div class="w-full bg-brand-orange h-28 rounded-top shadow-md"></div>
+                            <div class="w-full bg-brand-blue opacity-40 h-24 rounded-top"></div>
+                        </div>
+                        <div class="mt-4 space-y-2">
+                            <div class="h-2 w-full bg-gray-100 rounded-full"></div>
+                            <div class="h-2 w-2/3 bg-gray-100 rounded-full"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-2xl transform rotate-12 w-64 absolute -bottom-8 -right-12 z-20 border-l-4 border-b-4 border-gray-200">
+                        <div class="flex items-center justify-center h-32">
+                            <div class="relative w-24 h-24">
+                                <svg class="w-full h-full" viewBox="0 0 36 36">
+                                    <path class="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="4"></path>
+                                    <path class="text-brand-blue" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="75, 100" stroke-width="4"></path>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <i class="fa-solid fa-chart-pie text-brand-orange text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2 flex justify-center">
+                            <div class="h-2 w-16 bg-gray-200 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 2 -->
+    <section class="slide-frame" data-index="1">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20">
+                <div class="flex items-center mb-2">
+                    <div class="h-1 w-12 bg-brand-orange mr-4"></div>
+                    <p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p>
+                </div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Objetivo do Projeto</h1>
+            </div>
+            <div class="absolute top-0 right-0 w-1/3 h-full bg-gray-50 z-0"></div>
+            <div class="absolute bottom-0 right-0 w-64 h-64 bg-brand-orange opacity-5 rounded-full blur-3xl z-0 translate-x-1/3 translate-y-1/3"></div>
+            <div class="flex-1 px-16 pt-4 pb-12 relative z-10 flex items-center">
+                <div class="grid grid-cols-2 gap-12 w-full h-full">
+                    <div class="space-y-8 flex flex-col justify-center">
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-brand-blue">
+                            <div class="flex items-start mb-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue mr-4 flex-shrink-0"><i class="fa-solid fa-laptop-code"></i></div>
+                                <div>
+                                    <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Dashboard Interativo</h3>
+                                    <p class="text-gray-600 leading-relaxed">Dashboard em <strong>Streamlit</strong> rodando em container, consumindo dados diretamente do <strong>MongoDB</strong>.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-brand-orange">
+                            <div class="flex items-start mb-3">
+                                <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center text-brand-orange mr-4 flex-shrink-0"><i class="fa-solid fa-chart-line"></i></div>
+                                <div>
+                                    <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Foco em Métricas-Chave</h3>
+                                    <p class="text-gray-600 leading-relaxed">KPIs de <strong>faturamento</strong>, <strong>pedidos</strong> e <strong>reviews</strong>, agora calculados via consultas agregadas.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-8 flex flex-col justify-center">
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-gray-300 hover:border-brand-blue transition-colors">
+                            <div class="flex items-start mb-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 mr-4 flex-shrink-0"><i class="fa-solid fa-scale-balanced"></i></div>
+                                <div>
+                                    <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Comparativos &amp; Evolução</h3>
+                                    <p class="text-gray-600 leading-relaxed">Análises por <strong>método de pagamento</strong>, séries temporais e status, geradas direto do banco.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-gray-300 hover:border-brand-orange transition-colors">
+                            <div class="flex items-start mb-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 mr-4 flex-shrink-0"><i class="fa-solid fa-cubes"></i></div>
+                                <div>
+                                    <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Entrega Containerizada</h3>
+                                    <p class="text-gray-600 leading-relaxed">Execução via <strong>Docker Compose</strong>, simplificando setup e garantindo reprodutibilidade.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 02</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 3 -->
+    <section class="slide-frame" data-index="2">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Dados &amp; Modelagem</h1>
+            </div>
+            <div class="absolute top-0 right-0 w-1/3 h-full bg-gray-50 z-0"></div>
+            <div class="absolute bottom-0 right-0 w-64 h-64 bg-brand-blue opacity-5 rounded-full blur-3xl z-0 translate-x-1/3 translate-y-1/3"></div>
+            <div class="flex-1 px-16 pt-4 pb-12 relative z-10 flex items-center">
+                <div class="grid grid-cols-2 gap-12 w-full h-full">
+                    <div class="space-y-8 flex flex-col justify-center">
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-brand-blue">
+                            <div class="flex items-start mb-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue mr-4 flex-shrink-0"><i class="fa-solid fa-database"></i></div>
+                                <div>
+                                    <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Fonte &amp; Estrutura</h3>
+                                    <p class="text-gray-600 leading-relaxed">Coleções no <strong>MongoDB</strong>: <code>orders</code>, <code>payments</code>, <code>reviews</code>, <code>customers</code> e <code>products</code>, importadas dos dados públicos da Olist.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-brand-orange">
+                            <div class="flex items-start mb-3">
+                                <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center text-brand-orange mr-4 flex-shrink-0"><i class="fa-solid fa-plug-circle-check"></i></div>
+                                <div>
+                                    <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Agregações</h3>
+                                    <p class="text-gray-600 leading-relaxed">Consultas com <code>$lookup</code> e <code>$group</code> geram KPIs e séries temporais diretamente no banco (sem CSV hardcoded).</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-8 flex flex-col justify-center">
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-gray-300 hover:border-brand-blue transition-colors">
+                            <div class="flex items-start mb-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 mr-4 flex-shrink-0"><i class="fa-solid fa-index-card"></i></div>
+                                <div>
+                                    <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Índices</h3>
+                                    <p class="text-gray-600 leading-relaxed">Índices em <code>order_id</code>, <code>customer_id</code> e <code>order_purchase_timestamp</code> aceleram filtros e agregações.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-gray-300 hover:border-brand-orange transition-colors">
+                            <div class="flex items-start mb-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 mr-4 flex-shrink-0"><i class="fa-solid fa-shield-check"></i></div>
+                                <div>
+                                    <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Variáveis Sensíveis</h3>
+                                    <p class="text-gray-600 leading-relaxed">Conexão via <code>MONGO_URI</code> e <code>MONGO_DB</code> definidos em <code>.env</code> e injetados no container.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 03</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 4 -->
+    <section class="slide-frame" data-index="3">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-4 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Arquitetura Atualizada</h1>
+            </div>
+            <div class="absolute top-0 right-0 w-1/2 h-full bg-gray-50 z-0 transform skew-x-12 translate-x-24"></div>
+            <div class="absolute bottom-10 left-10 w-32 h-32 bg-brand-orange opacity-5 rounded-full blur-2xl z-0"></div>
+            <div class="flex-1 px-16 py-4 relative z-10 flex flex-col justify-center">
+                <div class="flex items-stretch justify-between gap-4 mb-10 w-full max-w-6xl mx-auto">
+                    <div class="w-1/3 flex flex-col">
+                        <div class="flow-card bg-white border-t-4 border-brand-orange rounded-lg p-6 shadow-md h-full flex flex-col relative">
+                            <div class="absolute -top-3 -left-3 w-8 h-8 bg-brand-orange rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">1</div>
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center text-brand-orange text-xl mr-4"><i class="fa-solid fa-database"></i></div>
+                                <h3 class="font-montserrat font-bold text-lg text-gray-800">MongoDB</h3>
+                            </div>
+                            <div class="flex-grow">
+                                <p class="text-gray-600 text-sm mb-2">Coleções persistidas em volume Docker.</p>
+                                <ul class="text-xs text-gray-500 list-disc list-inside space-y-1 mt-2">
+                                    <li>Dados Olist importados</li>
+                                    <li>Índices para consultas</li>
+                                    <li>Seed automatizado (init script)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-center w-16 text-gray-300"><i class="fa-solid fa-arrow-right text-2xl"></i></div>
+                    <div class="w-1/3 flex flex-col">
+                        <div class="flow-card bg-white border-t-4 border-brand-blue rounded-lg p-6 shadow-lg h-full flex flex-col relative pulse-effect ring-1 ring-blue-50">
+                            <div class="absolute -top-3 -left-3 w-8 h-8 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">2</div>
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-brand-blue text-xl mr-4"><i class="fa-brands fa-docker"></i></div>
+                                <h3 class="font-montserrat font-bold text-lg text-gray-800">App (Docker)</h3>
+                            </div>
+                            <div class="flex-grow space-y-2">
+                                <div class="flex items-center text-sm text-gray-700"><i class="fa-brands fa-python text-brand-blue mr-2 w-5"></i><span><strong>Streamlit</strong> (UI)</span></div>
+                                <div class="flex items-center text-sm text-gray-700"><i class="fa-solid fa-chart-column text-brand-orange mr-2 w-5"></i><span><strong>Plotly</strong> (Visualização)</span></div>
+                                <div class="flex items-center text-sm text-gray-700"><i class="fa-solid fa-database text-gray-500 mr-2 w-5"></i><span><strong>Pandas + PyMongo</strong> (Consultas)</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-center w-16 text-gray-300"><i class="fa-solid fa-arrow-right text-2xl"></i></div>
+                    <div class="w-1/3 flex flex-col">
+                        <div class="flow-card bg-white border-t-4 border-brand-orange rounded-lg p-6 shadow-md h-full flex flex-col relative">
+                            <div class="absolute -top-3 -left-3 w-8 h-8 bg-brand-orange rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">3</div>
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center text-brand-orange text-xl mr-4"><i class="fa-solid fa-display"></i></div>
+                                <h3 class="font-montserrat font-bold text-lg text-gray-800">Saída</h3>
+                            </div>
+                            <div class="flex-grow">
+                                <p class="text-gray-600 text-sm mb-2">Dashboard responsivo acessível em <code>localhost:8501</code>.</p>
+                                <ul class="text-xs text-gray-500 list-disc list-inside mt-2 space-y-1">
+                                    <li>Filtros dinâmicos</li>
+                                    <li>Gráficos interativos</li>
+                                    <li>Dados ao vivo do MongoDB</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-8 max-w-6xl mx-auto w-full">
+                    <div class="col-span-2 bg-gray-800 rounded-lg p-4 shadow-inner flex items-center">
+                        <div class="text-brand-orange mr-4 text-lg"><i class="fa-solid fa-terminal"></i></div>
+                        <div class="w-full">
+                            <p class="text-gray-400 text-xs font-bold uppercase mb-1">Execução (Docker)</p>
+                            <p class="font-mono text-green-400 text-sm">docker compose up -d</p>
+                        </div>
+                    </div>
+                    <div class="col-span-1 bg-blue-50 rounded-lg p-4 border border-blue-100 flex items-start">
+                        <div class="text-brand-blue mr-3 mt-1"><i class="fa-solid fa-circle-info"></i></div>
+                        <div>
+                            <p class="text-brand-blue text-xs font-bold uppercase mb-1">Conexão</p>
+                            <p class="text-gray-600 text-xs leading-snug">Variáveis <code>MONGO_URI</code> e <code>MONGO_DB</code> carregadas via <code>.env</code> pelo Compose.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 04</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 5 -->
+    <section class="slide-frame" data-index="4">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+            <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Decisões Técnicas</h1>
+            </div>
+            <div class="flex-1 px-16 pb-12 relative z-10 flex items-center">
+                <div class="grid grid-cols-12 gap-8 w-full">
+                    <div class="col-span-7 space-y-6">
+                        <div class="decision-card bg-white p-6 rounded-xl shadow-sm border-l-8 border-brand-blue flex items-start gap-5">
+                            <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 text-brand-blue text-xl"><i class="fa-brands fa-docker"></i></div>
+                            <div>
+                                <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Docker &amp; Compose</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed">Empacotamento do app e banco garante reprodutibilidade e setup em um comando.</p>
+                            </div>
+                        </div>
+                        <div class="decision-card bg-white p-6 rounded-xl shadow-sm border-l-8 border-brand-orange flex items-start gap-5">
+                            <div class="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center flex-shrink-0 text-brand-orange text-xl"><i class="fa-solid fa-database"></i></div>
+                            <div>
+                                <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">MongoDB</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed">Agregações (<code>$lookup</code>, <code>$group</code>, <code>$match</code>) calculam métricas direto no banco, evitando CSVs fixos.</p>
+                            </div>
+                        </div>
+                        <div class="decision-card bg-white p-6 rounded-xl shadow-sm border-l-8 border-brand-blue flex items-start gap-5">
+                            <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 text-brand-blue text-xl"><i class="fa-solid fa-gauge-high"></i></div>
+                            <div>
+                                <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Cache (st.cache_data)</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed">Resultados de consultas mais caras são cacheados para navegação fluida.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-span-5 flex flex-col gap-6">
+                        <div class="decision-card bg-white p-6 rounded-xl shadow-sm border-l-8 border-brand-orange flex items-start gap-5">
+                            <div class="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center flex-shrink-0 text-brand-orange text-xl"><i class="fa-solid fa-key"></i></div>
+                            <div>
+                                <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Configuração Segura</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed">Credenciais via <code>.env</code> e variáveis de ambiente no Compose; nada hardcoded.</p>
+                            </div>
+                        </div>
+                        <div class="decision-card bg-white p-6 rounded-xl shadow-sm border-l-8 border-brand-blue flex items-start gap-5">
+                            <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 text-brand-blue text-xl"><i class="fa-solid fa-circle-nodes"></i></div>
+                            <div>
+                                <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-2">Observabilidade Básica</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed">Logs unificados dos containers e métricas do Mongo (oplog/tail) para troubleshooting.</p>
+                            </div>
+                        </div>
+                        <div class="flex-1 bg-gray-50 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center p-6 text-center opacity-80">
+                            <div class="text-4xl text-gray-300 mb-3"><i class="fa-solid fa-cogs"></i></div>
+                            <p class="text-gray-500 text-xs font-semibold uppercase tracking-wide">Foco em Agilidade e Robustez</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 05</p></div>
+            </div>
+            <div class="absolute top-0 right-0 w-1/3 h-full bg-gray-50 z-0"></div>
+            <div class="absolute bottom-20 left-10 w-64 h-64 bg-brand-blue opacity-5 rounded-full blur-3xl z-0"></div>
+        </div>
+    </section>
+
+    <!-- Slide 6 -->
+    <section class="slide-frame" data-index="5">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Métricas Principais (Resumo)</h1>
+            </div>
+            <div class="absolute top-0 right-0 w-1/3 h-full bg-gray-50 z-0"></div>
+            <div class="absolute bottom-0 left-0 w-64 h-64 bg-brand-orange opacity-5 rounded-full blur-3xl z-0 translate-y-1/4 -translate-x-1/4"></div>
+            <div class="flex-1 px-16 pt-8 pb-12 relative z-10 flex flex-col justify-center">
+                <p class="text-gray-600 text-lg mb-10 max-w-4xl font-light">KPIs calculados em tempo de execução a partir do <strong>MongoDB</strong> e exibidos no topo do dashboard.</p>
+                <div class="grid grid-cols-3 gap-10 w-full">
+                    <div class="kpi-card bg-white p-8 rounded-2xl shadow-lg border-t-8 border-green-500 flex flex-col justify-between h-64">
+                        <i class="fa-solid fa-sack-dollar text-green-500 kpi-icon-bg"></i>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-14 h-14 rounded-xl bg-green-50 flex items-center justify-center text-green-600 text-2xl shadow-sm"><i class="fa-solid fa-dollar-sign"></i></div>
+                            <span class="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Receita</span>
+                        </div>
+                        <div>
+                            <p class="font-montserrat font-semibold text-gray-500 text-sm uppercase tracking-wider mb-1">Faturamento Total</p>
+                            <h2 class="font-montserrat font-extrabold text-5xl text-gray-800 mb-2">R$ 16.008.872,12</h2>
+                            <p class="text-xs text-gray-400 italic">Somatório em agregação <code>$group</code> no Mongo.</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card bg-white p-8 rounded-2xl shadow-lg border-t-8 border-brand-blue flex flex-col justify-between h-64">
+                        <i class="fa-solid fa-box-open text-brand-blue kpi-icon-bg"></i>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center text-brand-blue text-2xl shadow-sm"><i class="fa-solid fa-cart-shopping"></i></div>
+                            <span class="bg-blue-100 text-brand-blue text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Volume</span>
+                        </div>
+                        <div>
+                            <p class="font-montserrat font-semibold text-gray-500 text-sm uppercase tracking-wider mb-1">Pedidos Únicos</p>
+                            <h2 class="font-montserrat font-extrabold text-5xl text-gray-800 mb-2">99.441</h2>
+                            <p class="text-xs text-gray-400 italic">Contagem distinta de <code>order_id</code>.</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card bg-white p-8 rounded-2xl shadow-lg border-t-8 border-brand-orange flex flex-col justify-between h-64">
+                        <i class="fa-solid fa-star text-brand-orange kpi-icon-bg"></i>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-14 h-14 rounded-xl bg-yellow-50 flex items-center justify-center text-brand-orange text-2xl shadow-sm"><i class="fa-solid fa-star-half-stroke"></i></div>
+                            <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Qualidade</span>
+                        </div>
+                        <div>
+                            <p class="font-montserrat font-semibold text-gray-500 text-sm uppercase tracking-wider mb-1">Nota Média (Reviews)</p>
+                            <div class="flex items-baseline gap-3">
+                                <h2 class="font-montserrat font-extrabold text-5xl text-gray-800 mb-2">4,07</h2>
+                                <span class="text-gray-400 text-xl font-medium">/ 5,0</span>
+                            </div>
+                            <p class="text-xs text-gray-400 italic">Média de <code>review_score</code> agregada no banco.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-10 flex items-center justify-center">
+                    <div class="bg-blue-50 rounded-full px-6 py-2 flex items-center space-x-3 text-brand-blue border border-blue-100">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <p class="text-sm font-semibold">Valores reais calculados a cada carregamento usando consultas ao MongoDB.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 06</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 7 -->
+    <section class="slide-frame" data-index="6">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Comparação por Método de Pagamento</h1>
+            </div>
+            <div class="absolute top-0 right-0 w-1/4 h-full bg-gray-50 z-0"></div>
+            <div class="absolute bottom-10 right-10 w-48 h-48 bg-brand-blue opacity-5 rounded-full blur-3xl z-0"></div>
+            <div class="flex-1 px-16 py-4 relative z-10 flex items-stretch gap-12">
+                <div class="w-8/12 flex flex-col">
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 flex-1 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-montserrat font-bold text-lg text-gray-700">Volume de Pedidos vs. Receita Total</h3>
+                            <div class="flex items-center space-x-4 text-xs">
+                                <div class="flex items-center"><span class="w-3 h-3 bg-brand-orange rounded-sm mr-2"></span><span class="text-gray-500">Quantidade (Barras)</span></div>
+                                <div class="flex items-center"><span class="w-3 h-1 bg-brand-blue mr-2"></span><span class="text-gray-500">Receita (Linha)</span></div>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper flex-1"><canvas id="paymentChart"></canvas></div>
+                        <div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-start gap-3">
+                            <i class="fa-solid fa-lightbulb text-brand-orange mt-1"></i>
+                            <p class="text-sm text-brand-blue"><strong>Decisão Técnica:</strong> Agregações no Mongo pré-calculam ticket médio por método para correlação volume x receita.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-4/12 flex flex-col justify-center space-y-6">
+                    <div class="mb-2">
+                        <h3 class="font-montserrat font-bold text-xl text-brand-blue mb-1">Principais Insights</h3>
+                        <p class="text-sm text-gray-400 uppercase tracking-wide font-semibold">Baseado em payment_type</p>
+                    </div>
+                    <div class="insight-card bg-white p-5 rounded-lg shadow-sm border-brand-blue">
+                        <div class="flex items-center mb-2 text-brand-blue"><i class="fa-solid fa-credit-card mr-3 text-xl"></i><h4 class="font-bold font-montserrat">Dominância do Crédito</h4></div>
+                        <p class="text-gray-600 text-sm leading-relaxed"><strong>credit_card</strong> mantém maioria dos pedidos e receita.</p>
+                    </div>
+                    <div class="insight-card bg-white p-5 rounded-lg shadow-sm border-brand-orange">
+                        <div class="flex items-center mb-2 text-brand-orange"><i class="fa-solid fa-barcode mr-3 text-xl"></i><h4 class="font-bold font-montserrat">Relevância do Boleto</h4></div>
+                        <p class="text-gray-600 text-sm leading-relaxed"><strong>boleto</strong> segue como segundo método, importante para clientes sem crédito.</p>
+                    </div>
+                    <div class="insight-card bg-white p-5 rounded-lg shadow-sm border-gray-300">
+                        <div class="flex items-center mb-2 text-gray-600"><i class="fa-solid fa-ticket mr-3 text-xl"></i><h4 class="font-bold font-montserrat">Voucher &amp; Débito</h4></div>
+                        <p class="text-gray-600 text-sm leading-relaxed"><strong>voucher</strong> e <strong>debit_card</strong> seguem participação menor.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 07</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 8 -->
+    <section class="slide-frame" data-index="7">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-10 pb-4 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Séries Temporais</h1>
+            </div>
+            <div class="absolute top-0 right-0 w-1/3 h-full bg-gray-50 z-0"></div>
+            <div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent z-10"></div>
+            <div class="flex-1 px-16 pb-12 relative z-10 flex flex-col justify-center gap-6">
+                <div class="flex items-center justify-between">
+                    <p class="text-gray-600 text-sm max-w-3xl">Evolução mensal (2016–2018) calculada via pipeline agregada no MongoDB (<code>$match</code> + <code>$group</code> + <code>$sort</code>).</p>
+                    <div class="flex gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        <div class="flex items-center"><div class="w-3 h-3 bg-brand-blue rounded-full mr-2"></div>Faturamento</div>
+                        <div class="flex items-center"><div class="w-3 h-3 bg-brand-orange rounded-full mr-2"></div>Satisfação</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-8 h-full">
+                    <div class="chart-card bg-white p-6 rounded-xl shadow-md border-brand-blue flex flex-col h-96">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="font-montserrat font-bold text-lg text-gray-800">Evolução do Faturamento</h3>
+                                <p class="text-xs text-gray-500">Somatório de payment_value_total por mês</p>
+                            </div>
+                            <div class="bg-blue-50 p-2 rounded-lg text-brand-blue"><i class="fa-solid fa-chart-line text-xl"></i></div>
+                        </div>
+                        <div class="chart-wrapper"><canvas id="revenueChart"></canvas></div>
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex items-start gap-2">
+                            <i class="fa-solid fa-arrow-trend-up text-green-500 mt-1 text-xs"></i>
+                            <p class="text-xs text-gray-600 leading-snug"><strong>Insight:</strong> Pico em Nov/2017 (Black Friday), sustentando patamar alto em 2018.</p>
+                        </div>
+                    </div>
+                    <div class="chart-card bg-white p-6 rounded-xl shadow-md border-brand-orange flex flex-col h-96">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="font-montserrat font-bold text-lg text-gray-800">Média de Avaliações</h3>
+                                <p class="text-xs text-gray-500">Média de review_score (1–5) por mês</p>
+                            </div>
+                            <div class="bg-orange-50 p-2 rounded-lg text-brand-orange"><i class="fa-solid fa-star-half-stroke text-xl"></i></div>
+                        </div>
+                        <div class="chart-wrapper"><canvas id="reviewChart"></canvas></div>
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex items-start gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-orange-500 mt-1 text-xs"></i>
+                            <p class="text-xs text-gray-600 leading-snug"><strong>Insight:</strong> Notas ~4,0–4,3; quedas em meses de pico indicam pressão logística.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 08</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 9 -->
+    <section class="slide-frame" data-index="8">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Status dos Pedidos</h1>
+            </div>
+            <div class="absolute top-20 right-0 w-64 h-full bg-gray-50 z-0 transform skew-x-6 translate-x-20"></div>
+            <div class="absolute bottom-10 left-10 w-40 h-40 bg-brand-orange opacity-5 rounded-full blur-2xl z-0"></div>
+            <div class="flex-1 px-16 pb-12 relative z-10 flex gap-10">
+                <div class="w-2/3 flex flex-col">
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-full flex flex-col">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 class="font-montserrat font-bold text-xl text-gray-800">Distribuição por Status</h3>
+                                <p class="text-sm text-gray-500">Top 3 + Outros (para limpar a visualização)</p>
+                            </div>
+                            <div class="flex items-center gap-3 text-xs text-gray-500">
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-brand-blue mr-1"></span>Entregue</span>
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-brand-orange mr-1"></span>Shipped</span>
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-red-500 mr-1"></span>Cancelado</span>
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-gray-400 mr-1"></span>Outros</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 relative w-full min-h-0"><canvas id="statusChart"></canvas></div>
+                        <div class="mt-4 pt-4 border-t border-gray-100 flex items-start gap-3">
+                            <div class="bg-blue-50 p-2 rounded text-brand-blue"><i class="fa-solid fa-filter"></i></div>
+                            <div>
+                                <p class="text-sm text-gray-700 font-bold font-montserrat">Decisão de Agrupamento</p>
+                                <p class="text-xs text-gray-600 mt-1">Status raros (&lt;2%) agrupados em <strong>“Outros”</strong>; cálculo feito em pipeline de agregação.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-1/3 flex flex-col gap-6 justify-center">
+                    <div class="info-card bg-white p-6 rounded-lg shadow-sm border-brand-blue">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 mr-3"><i class="fa-solid fa-check-double"></i></div>
+                            <h4 class="font-montserrat font-bold text-lg text-gray-800">Taxa de Sucesso</h4>
+                        </div>
+                        <div class="flex items-baseline gap-2 mb-2">
+                            <span class="text-4xl font-extrabold text-brand-blue">~97%</span>
+                            <span class="text-sm text-gray-500">dos pedidos</span>
+                        </div>
+                        <p class="text-sm text-gray-600 leading-relaxed">Maioria chega a <strong>delivered</strong>, indicando operação estável.</p>
+                    </div>
+                    <div class="info-card bg-white p-6 rounded-lg shadow-sm border-red-400 border-l-4">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 mr-3"><i class="fa-solid fa-ban"></i></div>
+                            <h4 class="font-montserrat font-bold text-lg text-gray-800">Cancelamentos</h4>
+                        </div>
+                        <p class="text-sm text-gray-600 leading-relaxed mb-2">~0,6% cancelados.</p>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+                            <div class="bg-red-500 h-1.5 rounded-full" style="width: 0.6%"></div>
+                        </div>
+                        <p class="text-xs text-gray-400">Impacto visual reduzido.</p>
+                    </div>
+                    <div class="info-card bg-white p-6 rounded-lg shadow-sm border-brand-orange">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-brand-orange mr-3"><i class="fa-solid fa-truck-fast"></i></div>
+                            <h4 class="font-montserrat font-bold text-lg text-gray-800">Em Trânsito</h4>
+                        </div>
+                        <p class="text-sm text-gray-600 leading-relaxed"><strong>shipped</strong> monitora fila ativa e previsões de SLA.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 09</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 10 -->
+    <section class="slide-frame" data-index="9">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Resultados Obtidos</h1>
+            </div>
+            <div class="absolute top-0 right-0 w-1/2 h-full bg-gray-50 z-0"></div>
+            <div class="absolute top-1/3 left-10 w-96 h-96 bg-blue-50 rounded-full blur-3xl opacity-60 z-0"></div>
+            <div class="flex-1 px-16 py-8 relative z-10 grid grid-cols-12 gap-12 items-center">
+                <div class="col-span-5 flex flex-col items-center justify-center">
+                    <div class="relative w-full max-w-md">
+                        <div class="bg-white rounded-t-2xl border-4 border-gray-800 border-b-0 shadow-2xl overflow-hidden relative z-10 h-64 flex flex-col">
+                            <div class="bg-gray-100 border-b px-4 py-2 flex space-x-2">
+                                <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                            </div>
+                            <div class="flex-1 bg-slate-50 flex items-center justify-center flex-col p-6 relative">
+                                <div class="w-16 h-16 bg-brand-blue rounded-xl flex items-center justify-center mb-4 shadow-lg text-white text-3xl"><i class="fa-solid fa-chart-simple"></i></div>
+                                <h3 class="font-montserrat font-bold text-brand-blue text-lg">Olist Dashboard</h3>
+                                <p class="text-xs text-gray-400 mt-1">localhost:8501</p>
+                                <div class="absolute bottom-6 right-6 bg-white px-4 py-2 rounded-lg shadow-md border border-gray-100 flex items-center gap-2">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    <span class="text-xs font-bold text-gray-600">Online</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 h-4 rounded-b-xl shadow-xl relative z-10 w-[104%] -ml-[2%]"></div>
+                        <div class="bg-gray-700 h-1 w-16 mx-auto rounded-b-md"></div>
+                        <div class="absolute -top-6 -right-6 text-brand-orange opacity-20 text-6xl"><i class="fa-solid fa-code"></i></div>
+                        <div class="absolute -bottom-4 -left-6 text-brand-blue opacity-10 text-8xl"><i class="fa-brands fa-python"></i></div>
+                    </div>
+                </div>
+                <div class="col-span-7 flex flex-col gap-5">
+                    <div class="highlight-card bg-white p-5 rounded-xl shadow-sm border-l-8 border-brand-blue flex items-start gap-5">
+                        <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 text-brand-blue text-xl check-circle"><i class="fa-solid fa-laptop-code"></i></div>
+                        <div>
+                            <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-1">Dashboard Containerizado</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed">App Streamlit + MongoDB orquestrados via Docker Compose.</p>
+                        </div>
+                    </div>
+                    <div class="highlight-card bg-white p-5 rounded-xl shadow-sm border-l-8 border-brand-orange flex items-start gap-5">
+                        <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0 text-brand-orange text-xl check-circle"><i class="fa-solid fa-chart-pie"></i></div>
+                        <div>
+                            <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-1">Cobertura de Análises</h3>
+                            <div class="mt-2 grid grid-cols-2 gap-y-1 gap-x-4">
+                                <div class="flex items-center text-xs text-gray-600 font-semibold bg-gray-50 px-2 py-1 rounded"><i class="fa-solid fa-check text-green-500 mr-2"></i>Métodos de Pagamento</div>
+                                <div class="flex items-center text-xs text-gray-600 font-semibold bg-gray-50 px-2 py-1 rounded"><i class="fa-solid fa-check text-green-500 mr-2"></i>Séries Temporais</div>
+                                <div class="flex items-center text-xs text-gray-600 font-semibold bg-gray-50 px-2 py-1 rounded"><i class="fa-solid fa-check text-green-500 mr-2"></i>Reviews &amp; Qualidade</div>
+                                <div class="flex items-center text-xs text-gray-600 font-semibold bg-gray-50 px-2 py-1 rounded"><i class="fa-solid fa-check text-green-500 mr-2"></i>Status Logístico</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="highlight-card bg-white p-5 rounded-xl shadow-sm border-l-8 border-gray-400 flex items-start gap-5">
+                        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 text-gray-600 text-xl check-circle"><i class="fa-solid fa-lightbulb"></i></div>
+                        <div>
+                            <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-1">Base para Decisão</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed">Insights de sazonalidade (pico Nov/17), mix de pagamentos (crédito dominante) e satisfação (~4,0–4,3).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 10</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 11 -->
+    <section class="slide-frame" data-index="10">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Limitações e Próximos Passos</h1>
+            </div>
+            <div class="absolute bottom-0 right-0 w-1/3 h-1/3 bg-gray-50 rounded-tl-full z-0"></div>
+            <div class="absolute top-20 left-1/2 w-1 bg-gray-100 h-3/4 transform -translate-x-1/2 z-0"></div>
+            <div class="flex-1 px-16 py-8 relative z-10 grid grid-cols-2 gap-16">
+                <div class="flex flex-col h-full">
+                    <div classmass="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xl shadow-sm"><i class="fa-solid fa-lock"></i></div>
+                        <div>
+                            <h2 class="font-montserrat font-bold text-2xl text-gray-700">Limitações Atuais</h2>
+                            <p class="text-sm text-gray-400">Situação do deploy atual</p>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="content-card bg-white border border-gray-200 rounded-xl p-6 flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-gray-50 flex-shrink-0 flex items-center justify-center text-gray-400 text-lg"><i class="fa-solid fa-server"></i></div>
+                            <div>
+                                <h3 class="font-montserrat font-bold text-gray-800 mb-2">Infra Local</h3>
+                                <p class="text-sm text-gray-600 leading-relaxed">MongoDB roda em container local; sem replicaset ou backup automático.</p>
+                            </div>
+                        </div>
+                        <div class="content-card bg-white border border-gray-200 rounded-xl p-6 flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-gray-50 flex-shrink-0 flex items-center justify-center text-gray-400 text-lg"><i class="fa-solid fa-filter-circle-xmark"></i></div>
+                            <div>
+                                <h3 class="font-montserrat font-bold text-gray-800 mb-2">Filtros Limitados</h3>
+                                <p class="text-sm text-gray-600 leading-relaxed">Versão atual prioriza visão global; faltam drill-down por região e categoria.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col h-full">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue text-xl shadow-sm"><i class="fa-solid fa-rocket"></i></div>
+                        <div>
+                            <h2 class="font-montserrat font-bold text-2xl text-brand-blue">Próximos Passos</h2>
+                            <p class="text-sm text-brand-orange font-semibold">Roadmap de Evolução</p>
+                        </div>
+                    </div>
+                    <div class="relative space-y-0">
+                        <div class="step-item relative pb-8 pl-8">
+                            <div class="step-connector"></div>
+                            <div class="absolute left-0 top-0 w-12 h-12 flex items-center justify-center z-10">
+                                <div class="w-6 h-6 rounded-full bg-brand-blue border-4 border-white shadow-md"></div>
+                            </div>
+                            <div class="content-card bg-white border-l-4 border-brand-blue shadow-md rounded-r-xl p-5 ml-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="font-montserrat font-bold text-gray-800">Drill-down Interativo</h3>
+                                    <i class="fa-solid fa-layer-group text-blue-200"></i>
+                                </div>
+                                <p class="text-sm text-gray-600">Filtros por <strong>Categoria</strong> e <strong>UF</strong> com agregações incrementais.</p>
+                            </div>
+                        </div>
+                        <div class="step-item relative pb-8 pl-8">
+                            <div class="step-connector"></div>
+                            <div class="absolute left-0 top-0 w-12 h-12 flex items-center justify-center z-10">
+                                <div class="w-6 h-6 rounded-full bg-brand-orange border-4 border-white shadow-md"></div>
+                            </div>
+                            <div class="content-card bg-white border-l-4 border-brand-orange shadow-md rounded-r-xl p-5 ml-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="font-montserrat font-bold text-gray-800">Escalabilidade</h3>
+                                    <i class="fa-solid fa-truck-fast text-orange-200"></i>
+                                </div>
+                                <p class="text-sm text-gray-600">Habilitar replicaset, autenticação e monitoramento em cloud (Atlas ou Compose remoto).</p>
+                            </div>
+                        </div>
+                        <div class="step-item relative pl-8">
+                            <div class="absolute left-0 top-0 w-12 h-12 flex items-center justify-center z-10">
+                                <div class="w-6 h-6 rounded-full bg-green-500 border-4 border-white shadow-md pulse-icon"></div>
+                            </div>
+                            <div class="content-card bg-white border-l-4 border-green-500 shadow-md rounded-r-xl p-5 ml-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="font-montserrat font-bold text-gray-800">ETL Automatizado</h3>
+                                    <i class="fa-solid fa-gears text-green-200"></i>
+                                </div>
+                                <p class="text-sm text-gray-600">Pipeline incremental (Airflow/Prefect) para atualizar Mongo periodicamente.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 11</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 12 -->
+    <section class="slide-frame" data-index="11">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20 relative">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Execução (Docker)</h1>
+            </div>
+            <div class="absolute inset-0 tech-pattern z-0"></div>
+            <div class="absolute top-1/2 right-0 w-96 h-96 bg-orange-50 rounded-full blur-3xl opacity-40 z-0 transform translate-x-1/3"></div>
+            <div class="flex-1 px-16 pt-8 pb-12 relative z-10 flex flex-col justify-between">
+                <div class="grid grid-cols-3 gap-8 mt-6">
+                    <div class="relative pt-8 h-full">
+                        <div class="step-badge bg-brand-blue text-white">01</div>
+                        <div class="step-card bg-white p-6 rounded-xl border border-gray-200 flex flex-col justify-between">
+                            <div class="text-center mb-6">
+                                <h3 class="font-montserrat font-bold text-xl text-gray-800">Configurar .env</h3>
+                                <p class="text-sm text-gray-500 mt-2">Definir conexões seguras</p>
+                            </div>
+                            <div class="terminal-window">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                </div>
+                                <div class="p-4 font-mono text-sm text-gray-300">
+                                    <div class="flex"><span class="text-green-400 mr-2">$</span><p>cp .env.example .env</p></div>
+                                    <div class="flex mt-2"><span class="text-green-400 mr-2">$</span><p>echo "MONGO_URI=mongodb://mongo:27017" &gt;&gt; .env</p></div>
+                                    <div class="flex mt-1"><span class="text-green-400 mr-2">$</span><p>echo "MONGO_DB=olist" &gt;&gt; .env</p></div>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex justify-center"><i class="fa-solid fa-key text-4xl text-black-200"></i></div>
+                        </div>
+                    </div>
+                    <div class="relative pt-8 h-full">
+                        <div class="step-badge bg-brand-orange text-white">02</div>
+                        <div class="step-card bg-white p-6 rounded-xl border border-gray-200 flex flex-col justify-between">
+                            <div class="text-center mb-6">
+                                <h3 class="font-montserrat font-bold text-xl text-gray-800">Subir Serviços</h3>
+                                <p class="text-sm text-gray-500 mt-2">App + Mongo via Compose</p>
+                            </div>
+                            <div class="terminal-window">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                </div>
+                                <div class="p-4 font-mono text-sm text-gray-300">
+                                    <div class="flex"><span class="text-green-400 mr-2">$</span><p>docker compose up -d --build</p></div>
+                                    <div class="mt-2 text-xs text-gray-500">Containers: app (streamlit) + mongo</div>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex justify-center"><i class="fa-brands fa-docker text-4xl text-black-200"></i></div>
+                        </div>
+                    </div>
+                    <div class="relative pt-8 h-full">
+                        <div class="step-badge bg-brand-blue text-white">03</div>
+                        <div class="step-card bg-white p-6 rounded-xl border-2 border-brand-blue shadow-md flex flex-col justify-between relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-brand-blue transform rotate-45 translate-x-8 -translate-y-8"></div>
+                            <div class="text-center mb-6">
+                                <h3 class="font-montserrat font-bold text-xl text-brand-blue">Acessar Dashboard</h3>
+                                <p class="text-sm text-gray-500 mt-2">Servidor local</p>
+                            </div>
+                            <div class="terminal-window">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                </div>
+                                <div class="p-4 font-mono text-sm text-gray-300">
+                                    <div class="flex"><span class="text-green-400 mr-2">$</span><p>open http://localhost:8501</p></div>
+                                    <div class="mt-2 text-brand-blue font-bold bg-white px-2 py-1 rounded inline-block text-xs">Dados em tempo real do MongoDB</div>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex justify-center"><i class="fa-solid fa-rocket text-4xl text-brand-orange animate-bounce"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 bg-yellow-50 border-l-4 border-brand-orange rounded-r-lg p-4 flex items-start shadow-sm">
+                    <div class="mr-4 text-brand-orange text-xl mt-1"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div>
+                        <h4 class="font-montserrat font-bold text-gray-800 text-sm uppercase tracking-wide">Dados carregados no Mongo</h4>
+                        <p class="text-gray-600 text-sm mt-1">O Compose inicializa o Mongo com os dados da Olist (seed). Sem CSVs hardcoded.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 12</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 13 -->
+    <section class="slide-frame" data-index="12">
+        <div class="slide-container">
+            <div class="w-full px-16 pt-12 pb-6 bg-white z-20">
+                <div class="flex items-center mb-2"><div class="h-1 w-12 bg-brand-orange mr-4"></div><p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p></div>
+                <h1 class="font-montserrat font-extrabold text-5xl text-brand-blue">Checklist de Saúde</h1>
+            </div>
+            <div class="absolute inset-0 bg-pattern z-0"></div>
+            <div class="absolute top-1/4 right-20 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50 z-0"></div>
+            <div class="flex-1 px-16 py-8 relative z-10 flex flex-col justify-center">
+                <div class="w-full max-w-5xl mx-auto grid grid-cols-3 gap-8">
+                    <div class="conclusion-card bg-white p-8 rounded-xl shadow-lg border-brand-blue flex flex-col items-center text-center">
+                        <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-brand-blue text-2xl mb-6"><i class="fa-solid fa-plug-circle-check"></i></div>
+                        <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-3">Conectividade</h3>
+                        <p class="text-sm text-gray-600 leading-relaxed">Variáveis <code>MONGO_URI</code> e <code>MONGO_DB</code> carregadas e testadas no startup.</p>
+                    </div>
+                    <div class="conclusion-card bg-white p-8 rounded-xl shadow-lg border-brand-orange flex flex-col items-center text-center">
+                        <div class="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center text-brand-orange text-2xl mb-6"><i class="fa-solid fa-heart-pulse"></i></div>
+                        <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-3">Saúde dos Containers</h3>
+                        <p class="text-sm text-gray-600 leading-relaxed"><code>docker compose ps</code> deve mostrar ambos serviços <strong>healthy</strong>.</p>
+                    </div>
+                    <div class="conclusion-card bg-white p-8 rounded-xl shadow-lg border-gray-400 flex flex-col items-center text-center">
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 text-2xl mb-6"><i class="fa-solid fa-clipboard-check"></i></div>
+                        <h3 class="font-montserrat font-bold text-xl text-gray-800 mb-3">Consultas</h3>
+                        <p class="text-sm text-gray-600 leading-relaxed">Agregações retornando resultados em &lt; 1s para filtros padrão.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/90 z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 13</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 14 -->
+    <section class="slide-frame" data-index="13">
+        <div class="slide-container">
+            <div class="shape-blob bg-blue-100 w-96 h-96 rounded-full top-0 left-0 transform -translate-x-1/2 -translate-y-1/4"></div>
+            <div class="shape-blob bg-yellow-100 w-80 h-80 rounded-full bottom-0 right-0 transform translate-x-1/3 translate-y-1/3"></div>
+            <div class="absolute top-0 left-0 w-full px-16 pt-12 z-20 flex justify-between items-start">
+                <div>
+                    <div class="flex items-center mb-2">
+                        <div class="h-1 w-12 bg-brand-orange mr-4"></div>
+                        <p class="font-montserrat font-bold text-xs uppercase tracking-widest text-gray-400">Fundamentos de Big Data</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-1 flex flex-col items-center justify-center relative z-10 px-16 pt-10">
+                <div class="text-center mb-12 animate-fade-in-up">
+                    <h1 class="font-montserrat font-extrabold text-7xl text-brand-blue mb-4">Obrigado!</h1>
+                    <div class="flex items-center justify-center gap-3">
+                        <div class="h-px w-12 bg-brand-orange"></div>
+                        <div class="h-px w-12 bg-brand-orange"></div>
+                    </div>
+                </div>
+                <div class="w-full max-w-5xl">
+                    <p class="text-center text-xs font-bold text-gray-400 uppercase tracking-widest mb-8">Equipe de Projeto</p>
+                    <div class="grid grid-cols-4 gap-8">
+                        <div class="team-card flex flex-col items-center text-center group">
+                            <div class="w-24 h-24 rounded-full avatar-circle flex items-center justify-center text-3xl font-montserrat font-bold mb-4 group-hover:scale-110 transition-transform duration-300 border-4 border-white">PR</div>
+                            <h3 class="font-montserrat font-bold text-lg text-brand-blue">Pedro Rebello</h3>
+                            <p class="text-sm text-gray-500 font-light">Dados &amp; App</p>
+                        </div>
+                        <div class="team-card flex flex-col items-center text-center group">
+                            <div class="w-24 h-24 rounded-full avatar-circle flex items-center justify-center text-3xl font-montserrat font-bold mb-4 group-hover:scale-110 transition-transform duration-300 border-4 border-white">MA</div>
+                            <h3 class="font-montserrat font-bold text-lg text-brand-blue">Mariana Almeida</h3>
+                            <p class="text-sm text-gray-500 font-light">Dados &amp; App</p>
+                        </div>
+                        <div class="team-card flex flex-col items-center text-center group">
+                            <div class="w-24 h-24 rounded-full avatar-circle flex items-center justify-center text-3xl font-montserrat font-bold mb-4 group-hover:scale-110 transition-transform duration-300 border-4 border-white">GF</div>
+                            <h3 class="font-montserrat font-bold text-lg text-brand-blue">Gabriel Francisco</h3>
+                            <p class="text-sm text-gray-500 font-light">Dados &amp; App</p>
+                        </div>
+                        <div class="team-card flex flex-col items-center text-center group">
+                            <div class="w-24 h-24 rounded-full avatar-circle flex items-center justify-center text-3xl font-montserrat font-bold mb-4 group-hover:scale-110 transition-transform duration-300 border-4 border-white">GM</div>
+                            <h3 class="font-montserrat font-bold text-lg text-brand-blue">Guilherme Mendes</h3>
+                            <p class="text-sm text-gray-500 font-light">Dados &amp; App</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-16 bg-white px-8 py-4 rounded-full shadow-lg border border-gray-100 flex items-center gap-8">
+                    <div class="flex items-center gap-2 text-gray-600">
+                        <i class="fa-brands fa-github text-xl text-brand-blue"></i>
+                        <span class="text-sm font-mono">github.com/0GabrielF0/Trabalho-Final-BD</span>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-16 flex items-center justify-between px-16 border-t border-gray-200 bg-white/80 backdrop-blur-sm z-20">
+                <p class="font-montserrat text-xs font-bold text-gray-400 tracking-wider">DASHBOARD DE VENDAS OLIST</p>
+                <div class="flex items-center space-x-2"><div class="h-1.5 w-1.5 rounded-full bg-brand-blue"></div><p class="font-montserrat text-xs font-bold text-brand-blue">SLIDE 14</p></div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    // Navegação simples
+    const frames = Array.from(document.querySelectorAll('.slide-frame'));
+    let current = 0;
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const status = document.getElementById('status');
+
+    function show(idx) {
+        frames.forEach((f, i) => f.classList.toggle('active', i === idx));
+        current = idx;
+        status.textContent = `Slide ${current + 1} de ${frames.length}`;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === frames.length - 1;
+    }
+    prevBtn.onclick = () => current > 0 && show(current - 1);
+    nextBtn.onclick = () => current < frames.length - 1 && show(current + 1);
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight') nextBtn.click();
+        if (e.key === 'ArrowLeft') prevBtn.click();
+    });
+    document.addEventListener('click', e => {
+        if (e.target.tagName === 'BUTTON') return;
+        if (current < frames.length - 1) nextBtn.click();
+    });
+    show(0);
+
+    // Charts (garante criação apenas se elementos existem)
+    Chart.defaults.font.family = "'Open Sans', sans-serif";
+    Chart.defaults.color = '#6B7280';
+
+    // Slide 7 chart
+    if (document.getElementById('paymentChart')) {
+        const ctxPay = document.getElementById('paymentChart').getContext('2d');
+        const labelsPay = ['credit_card','boleto','credit_card,voucher','debit_card','voucher','credit_card,debit_card','not_defined'];
+        const qtyData = [73000, 20000, 5000, 2500, 1500, 800, 200];
+        const revData = [13000000, 3000000, 800000, 400000, 300000, 200000, 50000];
+        new Chart(ctxPay, {
+            type: 'bar',
+            data: {
+                labels: labelsPay,
+                datasets: [
+                    {
+                        label: 'Receita (R$)',
+                        data: revData,
+                        type: 'line',
+                        borderColor: '#212B5C',
+                        backgroundColor: '#212B5C',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#212B5C',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        yAxisID: 'y1',
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Qtd. Pedidos',
+                        data: qtyData,
+                        type: 'bar',
+                        backgroundColor: '#FDB913',
+                        hoverBackgroundColor: '#E0A00E',
+                        borderRadius: 4,
+                        barPercentage: 0.6,
+                        yAxisID: 'y',
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(33, 43, 92, 0.9)',
+                        titleFont: { family: 'Montserrat', size: 13 },
+                        bodyFont: { family: 'Open Sans', size: 12 },
+                        padding: 10,
+                        cornerRadius: 4,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.dataset.type === 'line') {
+                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.raw);
+                                } else {
+                                    label += new Intl.NumberFormat('pt-BR').format(context.raw);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: 'Open Sans', size: 12 }, color: '#6B7280' } },
+                    y: {
+                        type: 'linear', display: true, position: 'left',
+                        grid: { borderDash: [5,5], color: '#f3f4f6' },
+                        title: { display: true, text: 'Qtd. Pedidos', font: { family: 'Montserrat', size: 10, weight: 'bold' }, color: '#FDB913' },
+                        ticks: { font: { family: 'Open Sans', size: 10 }, color: '#9CA3AF' }
+                    },
+                    y1: {
+                        type: 'linear', display: true, position: 'right',
+                        grid: { drawOnChartArea: false },
+                        title: { display: true, text: 'Receita (R$)', font: { family: 'Montserrat', size: 10, weight: 'bold' }, color: '#212B5C' },
+                        ticks: { callback: v => 'R$ ' + (v/1000000).toFixed(1) + 'M', font: { family: 'Open Sans', size: 10 }, color: '#9CA3AF' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Slide 8 charts
+    if (document.getElementById('revenueChart')) {
+        const months = ['Oct/16','Jan/17','Apr/17','Jul/17','Oct/17','Jan/18','Apr/18','Jul/18','Oct/18'];
+        const revenueValues = [50000, 20000, 450000, 600000, 1200000, 900000, 1100000, 1000000, 20000];
+        const reviewValues  = [1.0, 4.0, 4.05, 4.2, 3.9, 4.0, 4.2, 3.8, 2.2];
+
+        new Chart(document.getElementById('revenueChart').getContext('2d'), {
+            type: 'line',
+            data: { labels: months, datasets: [{ label: 'Faturamento (R$)', data: revenueValues, borderColor: '#212B5C', backgroundColor: 'rgba(33, 43, 92, 0.08)', borderWidth: 2, pointBackgroundColor: '#fff', pointBorderColor: '#212B5C', pointRadius: 3, pointHoverRadius: 5, fill: true, tension: 0.35 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(33, 43, 92, 0.9)',
+                        titleFont: { family: 'Montserrat' },
+                        callbacks: { label: ctx => 'R$ ' + new Intl.NumberFormat('pt-BR').format(ctx.raw) }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+                    y: {
+                        grid: { borderDash: [5,5], color: '#f3f4f6' },
+                        ticks: { callback: v => 'R$ ' + (v/1000000).toFixed(1) + 'M', font: { size: 10 } }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('reviewChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: months, datasets: [{ label: 'Nota Média', data: reviewValues, backgroundColor: ctx => ctx.raw < 4.0 ? '#FDB913' : '#9CC3FF', hoverBackgroundColor: '#FDB913', borderRadius: 4, barPercentage: 0.7 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { backgroundColor: 'rgba(253, 185, 19, 0.9)', titleColor: '#fff', bodyColor: '#fff', titleFont: { family: 'Montserrat' } }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+                    y: { min: 0, max: 5, grid: { borderDash: [5,5], color: '#f3f4f6' }, ticks: { font: { size: 10 } } }
+                }
+            }
+        });
+    }
+
+    // Slide 9 chart
+    if (document.getElementById('statusChart')) {
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        const dataValues = [96478, 1107, 625, 1231];
+        const total = dataValues.reduce((a,b)=>a+b,0);
+        const percentages = dataValues.map(val => ((val / total) * 100).toFixed(1) + '%');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Entregue (delivered)', 'Enviado (shipped)', 'Cancelado', 'Outros'],
+                datasets: [{ label: 'Quantidade de Pedidos', data: dataValues, backgroundColor: ['#212B5C', '#FDB913', '#EF4444', '#9CA3AF'], borderRadius: 4, barPercentage: 0.6, categoryPercentage: 0.8 }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(33, 43, 92, 0.9)',
+                        titleFont: { family: 'Montserrat', size: 14 },
+                        bodyFont: { family: 'Open Sans', size: 12 },
+                        padding: 12,
+                        callbacks: {
+                            label: ctx => `${new Intl.NumberFormat('pt-BR').format(ctx.raw)} pedidos (${percentages[ctx.dataIndex]})`
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end', align: 'end', color: '#6B7280', font: { weight: 'bold', family: 'Open Sans' },
+                        formatter: v => new Intl.NumberFormat('pt-BR').format(v)
+                    }
+                },
+                scales: {
+                    x: { grid: { color: '#f3f4f6', borderDash: [4,4] }, ticks: { font: { family: 'Open Sans' }, color: '#9CA3AF' } },
+                    y: { grid: { display: false }, ticks: { font: { family: 'Montserrat', weight: '600', size: 12 }, color: '#4B5563' } }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+    }
+</script>
+</body>
+</html>
