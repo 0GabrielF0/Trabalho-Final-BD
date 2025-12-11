@@ -2,6 +2,11 @@
 
 Este projeto realiza a integração entre um dashboard Streamlit e um banco de dados MongoDB para visualização de dados de e-commerce. O sistema conta com scripts de automação para deploy e carga inicial de dados (auto-seeding) a partir de arquivos CSV.
 
+# Fonte dos Dados
+
+https://www.kaggle.com/datasets/erak1006/brazilian-e-commerce-company-olist
+
+
 ## Guia de Uso Automático
 
 Copie todo o conteúdo da célula e cole no terminal, estando na pasta `/opt/`
