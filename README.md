@@ -2,6 +2,15 @@
 
 Este projeto realiza a integração entre um dashboard Streamlit e um banco de dados MongoDB para visualização de dados de e-commerce. O sistema conta com scripts de automação para deploy e carga inicial de dados (auto-seeding) a partir de arquivos CSV.
 
+## Integrantes
+- Gabriel Francisco – 22408417
+
+- Guilherme Mendes Carlos – 22408949
+
+- Mariana Almeida – 22401569
+
+- Pedro Rebello Borges de Barros – 22405550
+
 # Fonte dos Dados
 
 https://www.kaggle.com/datasets/erak1006/brazilian-e-commerce-company-olist
